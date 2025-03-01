@@ -1,3 +1,4 @@
+
 import streamlit as st
 from streamlit.components.v1 import html
 
@@ -582,7 +583,8 @@ html_code = """
         }
 
         function showOnMap(lat, lng) {
-            map.setView([lat, lng], 15);
+            map.setView([lat, lng], 15); // Update the map view
+            document.getElementById('map').scrollIntoView({ behavior: 'smooth' }); // Scroll to the map
         }
 
         // Event handlers
