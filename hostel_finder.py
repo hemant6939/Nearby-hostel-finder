@@ -849,7 +849,30 @@ html_code = """
             loading.style.display = 'block';
 
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${location}`);
+                if (!location || location.trim() === '') {
+                    // No location provided: return all with 0 distance
+                    let results = hostels.map(h => ({ ...h, distance: 0 }));
+                    // Apply price filter
+                    if (minPrice && maxPrice) {
+                        results = results.filter(hostel => {
+                            const price = parseFloat(hostel.price.replace(/[^0-9]/g, ''));
+                            return price >= minPrice && price <= maxPrice;
+                        });
+                    }
+                    // Apply amenities filter
+                    if (amenities.length > 0) {
+                        results = results.filter(hostel =>
+                            amenities.every(amenity => hostel.amenities.toLowerCase().includes(amenity.toLowerCase()))
+                        );
+                    }
+                    return results;
+                }
+
+                const encodedLocation = encodeURIComponent(location);
+                const response = await Promise.race([
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodedLocation}`),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+                ]);
                 if (!response.ok) throw new Error('Network error');
                 const data = await response.json();
                 
@@ -892,8 +915,19 @@ html_code = """
 
             } catch (error) {
                 console.error('Search error:', error);
-                alert('Error searching hostels');
-                return [];
+                // Fallback: do a keyword-based filter locally if geocoding fails
+                const keyword = (location || '').trim().toLowerCase();
+                let fallbackResults = hostels.map(h => ({ ...h, distance: 0 }));
+                if (keyword) {
+                    fallbackResults = fallbackResults.filter(h =>
+                        (h.address + ' ' + h.name).toLowerCase().includes(keyword)
+                    );
+                }
+                if (fallbackResults.length === 0) {
+                    alert('Could not reach location service. Showing all hostels.');
+                    fallbackResults = hostels.map(h => ({ ...h, distance: 0 }));
+                }
+                return fallbackResults;
             } finally {
                 loading.style.display = 'none';
             }
@@ -933,7 +967,7 @@ html_code = """
                         </div>
                         <div class="detail-item">
                             <i class="fas fa-map-marker-alt"></i>
-                            <span>${hostel.distance.toFixed(1)} km away</span>
+                            <span>${(hostel.distance ?? 0).toFixed(1)} km away</span>
                         </div>
                         <div class="detail-item">
                             <i class="fas fa-phone"></i>
@@ -1118,7 +1152,7 @@ html_code = """
                 document.getElementById('radius').value = lastRadius;
                 document.getElementById('searchForm').dispatchEvent(new Event('submit'));
             } else {
-                showResults(hostels);
+                showResults(hostels.map(h => ({ ...h, distance: 0 })));
                 updateMap(hostels);
             }
         });
@@ -1172,4 +1206,4 @@ def main():
     st.caption("© 2025 Indian Hostel Finder | For educational purposes only")
 
 if __name__ == "__main__":
-    main() 
+    main()
