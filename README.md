@@ -58,7 +58,7 @@ The **Indian Hostel Finder** is a web application designed to help users search 
 Clone the Repository:
 bash
 Copy
-git clone https://github.com/your-username/indian-hostel-finder.git
+git clone https://github.com/your-username/Nearby-hostel-finder.git
 cd indian-hostel-finder
 Run the Streamlit App:
 bash
