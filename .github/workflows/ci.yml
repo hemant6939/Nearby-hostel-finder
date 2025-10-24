@@ -1,0 +1,48 @@
+name: Python CI
+
+# When should this workflow run?
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Define what jobs to run
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest   # Use a temporary Linux machine
+
+    steps:
+      # Step 1 - Download your repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2 - Install Python (version 3.10)
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Step 3 - Cache pip packages to make installs faster
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Step 4 - Install dependencies from
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Step 5 - Run tests (if a tests folder exists)
+      - name: Run tests (pytest)
+        run: |
+          if [ -d tests ]; then
+            pytest -q
+          else
+            echo "No tests folder found; skipping tests"
+          fi
